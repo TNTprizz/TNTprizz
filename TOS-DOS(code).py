@@ -70,7 +70,7 @@ def next(vc,id):
     global playlist
     global sourcelist
     if int(len(playlist[id]["queue"])) == playlist[id]["order"]:
-        if loop:
+        if playlist[id]["loop"]:
             playlist[id]["order"] = 0
         else:
             playlist[id] = {"order":0, "queue":[], "loop":False, "np":""}
@@ -112,6 +112,11 @@ async def music(ctx, arg: str = "none", *input):
         else:
             await ctx.message.add_reaction("❌")
     elif arg == "loop":
+        try:
+            print(playlist[serverid])
+        except KeyError:
+            await ctx.message.add_reaction("❌")
+            return
         if playlist[serverid]["loop"]:
             playlist[serverid]["loop"] = False
         else:
@@ -162,6 +167,11 @@ async def music(ctx, arg: str = "none", *input):
             next(voice_channel,serverid)
         await ctx.message.add_reaction("☑️")
     elif arg == "listqueue" or arg == "lq":
+        try:
+            print(playlist[serverid])
+        except KeyError:
+            await ctx.message.add_reaction("❌")
+            return
         if playlist[serverid]["np"] == "":
             nowp = "Nothing playing now"
         else:
@@ -250,11 +260,21 @@ async def music(ctx, arg: str = "none", *input):
             await ctx.send("This is an invaild url. Please use Youtube link.")
             await ctx.message.add_reaction("❌")
     elif arg == "shuffle":
+        try:
+            print(playlist[serverid])
+        except KeyError:
+            await ctx.message.add_reaction("❌")
+            return
         cp = playlist[serverid]["queue"][int(playlist[serverid]["order"]):]
         shuffle(cp)
         playlist[serverid]["queue"][int(playlist[serverid]["order"]):] = cp
         await ctx.message.add_reaction("🔀")
     elif arg == "pause":
+        try:
+            print(playlist[serverid])
+        except KeyError:
+            await ctx.message.add_reaction("❌")
+            return
         try:
             voice_client = ctx.message.guild.voice_client
             if voice_client.is_playing():
@@ -265,6 +285,11 @@ async def music(ctx, arg: str = "none", *input):
         except: pass
     elif arg == "resume":
         try:
+            print(playlist[serverid])
+        except KeyError:
+            await ctx.message.add_reaction("❌")
+            return
+        try:
             voice_client = ctx.message.guild.voice_client
             if voice_client.is_paused():
                 await ctx.message.add_reaction("⏯")
@@ -273,6 +298,11 @@ async def music(ctx, arg: str = "none", *input):
                 await ctx.send("The bot was not playing anything before this. Use play command")
         except: pass
     elif arg == "skip":
+        try:
+            print(playlist[serverid])
+        except KeyError:
+            await ctx.message.add_reaction("❌")
+            return
         try:
             voice_client = ctx.message.guild.voice_client
             if voice_client.is_playing():
@@ -283,6 +313,11 @@ async def music(ctx, arg: str = "none", *input):
         except:
             pass
     elif arg == "stop":
+        try:
+            print(playlist[serverid])
+        except KeyError:
+            await ctx.message.add_reaction("❌")
+            return
         playlist[serverid] = {"order":0, "queue":[], "loop":False, "np":""}
         try:
             voice_client = ctx.message.guild.voice_client
@@ -951,6 +986,6 @@ async def man(ctx, cmd: str = "all"):
     await ctx.send(embed=embed)
 
 print('No santax exception, running')
-token = "erfe"
+token = open("E.key","r+")
 bot.run(token.read())
 token.close()
