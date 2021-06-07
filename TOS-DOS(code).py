@@ -56,7 +56,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
 #end youtube_dl config
 #basic and global values.
 
-ver = "202105291319-ΣH"
+ver = "202106071656-ΣI"
 intents = discord.Intents().all()
 bot = commands.Bot(command_prefix='$', help_command=None, intents=intents)
 status = ['E', 'with 1 user', 'games', 'TOS-DOS', 'music', 'cytus2', 'Myself', 'phigros', 'nothing', '$man all', '$ask', 'maths', 'Dancerail3','MEMZ','Cytus','$about','CentOS','kali-linux','PUBG','Ubuntu','java','python','WannaCry']
@@ -66,29 +66,18 @@ secrets = ["I am smiling evily but I am not gay", "I am a cell", "I love my wate
 api = Api(api_key="AIzaSyALFRDV_TOgkbiYvcxml47vMxSFt-ynkZQ")
 
 #for music player
-def next(vc):
-    global addedqueue
-    global np
-    global queue
+def next(vc,id):
+    global playlist
     global sourcelist
-    global order
-    global loop
-    if int(len(queue) + 1) == order:
+    if int(len(playlist[id]["queue"])) == playlist[id]["order"]:
         if loop:
-            order = 0
+            playlist[id]["order"] = 0
         else:
-            os.system("rm -rf *.m4a")
-            os.system("rm -rf *.webm")
-            os.system("rm -rf *.mp3")
-            os.system("rm -rf *.part")
-            queue = []
-            addedqueue = []
-            sourcelist = {}
-            np = ""
+            playlist[id] = {"order":0, "queue":[], "loop":False, "np":""}
             return
-    np = queue[order]
-    vc.play(discord.FFmpegPCMAudio(executable="/bin/ffmpeg", source=sourcelist[np]), after=lambda e:next(vc))
-    order = order + 1
+    playlist[id]["np"] = playlist[id]["queue"][playlist[id]["order"]]
+    vc.play(discord.FFmpegPCMAudio(executable="/bin/ffmpeg", source=sourcelist[playlist[id]["np"]]), after=lambda e:next(vc,id))
+    playlist[id]["order"] = playlist[id]["order"] + 1
     
 #music player
 @bot.command(aliases=["m","song","M"])
@@ -97,13 +86,9 @@ async def music(ctx, arg: str = "none", *input):
         url = " ".join(input)
     else:
         url = "none"
-    global addedqueue
-    global queue
+    serverid = ctx.message.guild.id
+    global playlist
     global sourcelist
-    global songqueue
-    global np
-    global order
-    global loop
     br = Browser()
     con = ""
     if arg == "connect" or arg == "join":
@@ -114,6 +99,7 @@ async def music(ctx, arg: str = "none", *input):
             try:
                 channel = ctx.message.author.voice.channel
                 await channel.connect()
+                playlist[serverid] = {"order":0, "queue":[], "loop":False, "np":""}
                 await ctx.message.add_reaction("☑️")
             except:
                 await ctx.message.add_reaction("❌")
@@ -121,14 +107,15 @@ async def music(ctx, arg: str = "none", *input):
         voice_client = ctx.message.guild.voice_client
         if voice_client.is_connected():
             await voice_client.disconnect()
+            playlist[serverid] = {"order":0, "queue":[], "loop":False, "np":""}
             await ctx.message.add_reaction("☑️")
         else:
             await ctx.message.add_reaction("❌")
     elif arg == "loop":
-        if loop:
-            loop = False
+        if playlist[serverid]["loop"]:
+            playlist[serverid]["loop"] = False
         else:
-            loop = True
+            playlist[serverid]["loop"] = True
         await ctx.message.add_reaction("🔁")
     elif arg == "search" or arg == "s":
         if url == "none":
@@ -156,10 +143,11 @@ async def music(ctx, arg: str = "none", *input):
             return
         url = "https://www.youtube.com/" + result[opt]["url_suffix"]
         br.open(url)
-        queue.append(br.title())
+        playlist[serverid]["queue"].append(br.title())
         try:
             channel = ctx.message.author.voice.channel
             await channel.connect()
+            playlist[serverid] = {"order":0, "queue":[], "loop":False, "np":""}
         except: pass
         server = ctx.message.guild
         voice_channel = server.voice_client
@@ -171,27 +159,26 @@ async def music(ctx, arg: str = "none", *input):
         if voice_client.is_playing() or voice_client.is_paused():
             pass
         else:
-            next(voice_channel)
+            next(voice_channel,serverid)
         await ctx.message.add_reaction("☑️")
     elif arg == "listqueue" or arg == "lq":
-        if np == "":
+        if playlist[serverid]["np"] == "":
             nowp = "Nothing playing now"
         else:
-            nowp = np
-        if not len(queue) == 0:
+            nowp = playlist[serverid]["np"]
+        if not len(playlist[serverid]["queue"]) == 0:
             try:
                 order1 = int(url)
                 order1 = order1 * 10
             except:
-                order1 = floor(int(order - 1) / 10) * 10 + 10
-            E = queue[int(order1 - 10):int(order1)]
+                order1 = floor(int(playlist[serverid]["order"] - 1) / 10) * 10 + 10
+            E = playlist[serverid]["queue"][int(order1 - 10):int(order1)]
             con = "\n".join(E)
             con = "\n== Contents ==\n" + con + ""
         else:
             con = ""
             order1 = 10
-        await ctx.send("```asciidoc\n== Now playing ==\n" + nowp + con + "\n\n" + "current page:" + str(order1 / 10) +"\nPosition:" + str(order) + "/" + str(len(queue)) + "\nloop:" + str(loop) + "```")
-
+        await ctx.send("```asciidoc\n== Now playing ==\n" + nowp + con + "\n\n" + "current page:" + str(order1 / 10) +"\nPosition:" + str(playlist[serverid]["order"]) + "/" + str(len(playlist[serverid]["queue"])) + "\nloop:" + str(playlist[serverid]["loop"]) + "```")
     elif arg == "apl" or arg == "addplaylist":
         if url == "none":
             await ctx.message.add_reaction("❌")
@@ -199,6 +186,7 @@ async def music(ctx, arg: str = "none", *input):
         try:
             channel = ctx.message.author.voice.channel
             await channel.connect()
+            playlist[serverid] = {"order":0, "queue":[], "loop":False, "np":""}
         except: pass
         server = ctx.message.guild
         voice_channel = server.voice_client
@@ -214,12 +202,11 @@ async def music(ctx, arg: str = "none", *input):
             async with ctx.typing():
                 source = await YTDLSource.from_url(vurl, loop=bot.loop)
             br.open(vurl)
-            queue.append(br.title())
-            addedqueue.append(br.title())
+            playlist[serverid]["queue"].append(br.title())
             sourcelist[br.title()] = source
-            np = queue[order]
-            voice_channel.play(discord.FFmpegPCMAudio(executable="/bin/ffmpeg", source=sourcelist[np]), after=lambda e:next(voice_channel))
-            order = order + 1
+            playlist[serverid]["np"] = playlist[serverid]["queue"][playlist[serverid]["order"]]
+            voice_channel.play(discord.FFmpegPCMAudio(executable="/bin/ffmpeg", source=sourcelist[playlist[serverid]["np"]]), after=lambda e:next(voice_channel,serverid))
+            playlist[serverid]["order"] = playlist[serverid]["order"] + 1
             i = 1
         async with ctx.typing():
             while not i == len(plist):
@@ -228,7 +215,7 @@ async def music(ctx, arg: str = "none", *input):
                     vurl = "https://www.youtube.com/watch?v=" + vid
                     source = await YTDLSource.from_url(vurl, loop=bot.loop)
                     br.open(vurl)
-                    queue.append(br.title())
+                    playlist[serverid]["queue"].append(br.title())
                     sourcelist[br.title()] = source
                 except:
                     await ctx.send("Something went wrong, ignoring......")
@@ -241,6 +228,7 @@ async def music(ctx, arg: str = "none", *input):
         try:
             channel = ctx.message.author.voice.channel
             await channel.connect()
+            playlist[serverid] = {"order":0, "queue":[], "loop":False, "np":""}
         except: pass
         try:
             server = ctx.message.guild
@@ -250,22 +238,21 @@ async def music(ctx, arg: str = "none", *input):
             async with ctx.typing():
                 source = await YTDLSource.from_url(url, loop=bot.loop)
             br.open(url)
-            queue.append(br.title())
-            addedqueue.append(br.title())
+            playlist[serverid]["queue"].append(br.title())
             sourcelist[br.title()] = source
             if voice_client.is_playing() or voice_client.is_paused():
                 pass
             else:
-                next(voice_channel)
+                next(voice_channel,serverid)
             await ctx.message.add_reaction("☑️")
         except Exception():
-            del queue[len(queue)]
+            del playlist[serverid]["queue"][len(playlist[serverid]["queue"])]
             await ctx.send("This is an invaild url. Please use Youtube link.")
             await ctx.message.add_reaction("❌")
     elif arg == "shuffle":
-        cp = queue[int(order):]
+        cp = playlist[serverid]["queue"][int(playlist[serverid]["order"]):]
         shuffle(cp)
-        queue[int(order):] = cp
+        playlist[serverid]["queue"][int(playlist[serverid]["order"]):] = cp
         await ctx.message.add_reaction("🔀")
     elif arg == "pause":
         try:
@@ -296,18 +283,13 @@ async def music(ctx, arg: str = "none", *input):
         except:
             pass
     elif arg == "stop":
-        os.system("rm -rf *.m4a")
-        os.system("rm -rf *.webm")
-        os.system("rm -rf *.mp3")
-        os.system("rm -rf *.part")
-        queue = []
-        sourcelist = {}
-        order = 0
+        playlist[serverid] = {"order":0, "queue":[], "loop":False, "np":""}
         try:
             voice_client = ctx.message.guild.voice_client
             if voice_client.is_playing():
                 await ctx.message.add_reaction("⏹️")
                 await voice_client.stop()
+                playlist[serverid] = {"order":0, "queue":[], "loop":False, "np":""}
             else:
                 await ctx.message.add_reaction("❌")
         except: pass
@@ -331,24 +313,14 @@ async def on_ready():
     os.system("rm -rf *.webm")
     os.system("rm -rf *.mp3")
     os.system("rm -rf *.part")
-    global addedqueue
-    addedqueue = []
-    global order
-    order = 0
-    global loop
-    loop = False
+    global playlist
+    playlist = {}
     global exitcode
     exitcode = 0
     global server
     server = None
-    global queue
-    queue = []
     global sourcelist
     sourcelist = {}
-    global np
-    np = ""
-    global songqueue
-    songqueue = []
     global votestatus
     votestatus = False
     global voteid
@@ -386,6 +358,12 @@ async def on_command_error(ctx, error):
                               url="http://tntprizz.zapto.org/dc",
                               description="You should use the correct arguement\n"
                                           "or run `$man <command>` for further help.",
+                              color=discord.Color.red())
+    elif isinstance(error, KeyError):
+        embed = discord.Embed(title="E! I am not in the voice channel!!!",
+                              url="http://tntprizz.zapto.org/dc",
+                              description="You should let the bot join voice channel first!\n"
+                                          "run `$man music` for further help.",
                               color=discord.Color.red())
     else:
         embed = discord.Embed(title="E! Something went wrong!",
@@ -973,6 +951,6 @@ async def man(ctx, cmd: str = "all"):
     await ctx.send(embed=embed)
 
 print('No santax exception, running')
-token = open("EEEEEEE","r+")
+token = "erfe"
 bot.run(token.read())
 token.close()
