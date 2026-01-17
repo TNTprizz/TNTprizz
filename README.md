@@ -13,3 +13,5 @@ I am @TNTprizz80315. You can find me on some social medias with the name. (Use C
 If you want to reach me via. Discord, use @tntprizz as alias.
 
 Use Github to put random things online. Still learning various programming languages.
+
+Treats everything like how the world does to me. Unfortunately the world is being mean to me.
